@@ -1,7 +1,9 @@
 import os
 from datetime import datetime
+
+from multipart import file_path
 from werkzeug.utils import secure_filename
-from langchain_community.document_loaders import UnstructuredPDFLoader
+from langchain_community.document_loaders import UnstructuredPDFLoader, UnstructuredFileLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from src.get_vector_db import get_vector_db
 
@@ -9,7 +11,7 @@ TEMP_FOLDER = os.getenv('TEMP_FOLDER', './_temp')
 
 # Function to check if the uploaded file is allowed (only PDF files)
 def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'pdf'}
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'pdf', 'mobi'}
 
 # Function to save the uploaded file to the temporary folder
 def save_file(file):
@@ -22,10 +24,15 @@ def save_file(file):
 
     return file_path
 
-# Function to load and split the data from the PDF file
-def load_and_split_data(file_path):
-    # Load the PDF file and split the data into chunks
-    loader = UnstructuredPDFLoader(file_path=file_path)
+# Function to load and split the data from the PDF & MOBI files
+def load_and_split_data(import_file_path):
+    file_type = os.path.splitext(file_path)[1].lower()
+    if file_type == 'pdf':
+        loader = UnstructuredPDFLoader(file_path=import_file_path)
+    elif file_type == 'mobi':
+        loader = UnstructuredFileLoader(file_path=import_file_path)
+    else:
+        raise ValueError(f"Unsupported file type: {file_type}")
     data = loader.load()
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=7500, chunk_overlap=100)
     chunks = text_splitter.split_documents(data)
